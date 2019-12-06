@@ -33,7 +33,7 @@ space_after = 9
 
 
 # Files and Languages
-lang_acron = {'gothic':'got', 'latin':'la', 'italian':'it', 'german':'de', 'greek':'grc'}
+lang_acron = {'gothic':'got', 'latin':'la', 'italian':'it', 'german':'de', 'greek':'grc', 'english':'eng'}
 lang_file = {'gothic':'gothic/gothic_latin_utf8.txt', 'latin':'latin/latin_vulgata_clementina_utf8.txt', 'italian':'italian/italian_riveduta_1927_utf8.txt',
 			 'german':'german/german_luther_1912_utf8.txt', 'greek':'greek/greek_byzantine_2000_utf8.txt', 'english':'english/basic_english_utf8.txt',
 			 'old_english':'old_english/douay_rheims_utf8.txt'}
@@ -161,19 +161,42 @@ def clean(text):
 
 
 
-def match_by_edit_distance(mapped, book, chapter, verse, lang):
-	pdb.set_trace()
-	for word1 in mapped[book][chapter][verse]['got_translation']['Got_ipa']:
+def expand_voc_by_distance(voc, mapped, book, chapter, verse, lang):
+	lang_map = {'german':'Ger', 'italian':'it', 'latin':'Lat', 'spanish':'es', 'english':'Eng', 'russian':'Rus', 'old_english':'OEng', 'greek':'Gre'}
+	for i, word1 in enumerate(mapped[book][chapter][verse]['got_translation']['Got_ipa']):
+		name = mapped[book][chapter][verse]['got_translation']['Got'][i]
+		if i == 0 or name[0].islower():
+			continue
 		if lang+'_ipa' in mapped[book][chapter][verse]:
-			pdb.set_trace()
-			for word2 in mapped[book][chapter][verse][lang+'_ipa']:
-				print(word1, word2, editdistance.eval(word1, word2))
+			for j, word2 in enumerate(mapped[book][chapter][verse][lang+'_ipa']):
+				distance = editdistance.eval(word1, word2)
+				if (distance <= 1 and len(word1) >= 4) or (distance <= 2 and len(word1) >= 5):
+					print(word1, word2, mapped[book][chapter][verse]['got_translation'][lang_map[lang]][i], mapped[book][chapter][verse][lang][j], distance)
+					
+					try:
+						gothic_word = mapped[book][chapter][verse]['got_translation']['Got'][i]
+						translated_word = mapped[book][chapter][verse][lang][j]
+						mapped[book][chapter][verse]['got_translation'][lang_map[lang]][i].append(translated_word)
+
+						if gothic_word not in voc:
+							voc[gothic_word] = {}
+
+						if lang_map[lang] in voc[gothic_word]:
+							if translated_word not in voc[gothic_word][lang_map[lang]]:
+								voc[gothic_word][lang_map[lang]].append(translated_word)
+						else:
+							voc[gothic_word].update({lang_map[lang]:[translated_word]})
+					except:
+						pdb.set_trace()
+						print('Stuck here')
+					
+	pickle.dump(voc, open('final_voc.p', 'wb'))
 	return True
 
 
 
 
-def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}):
+def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}, expand_voc=False):
 	f1_dict = load_bible(open(f1, 'r'))
 
 	lemma_l1 = False if cube1 == False else True
@@ -237,7 +260,7 @@ def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}
 									if word not in unfound_words[lang]:
 										unfound_words[lang][word] = 0
 									unfound_words[lang][word] += 1
-									mapped[book][chapter][verse][l1+'_translation'][lang].append('_')
+									mapped[book][chapter][verse][l1+'_translation'][lang].append([])
 
 	for lang in found_words:
 		found = sum([found_words[lang][w] for w in found_words[lang]])
@@ -272,32 +295,41 @@ def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}
 						#pdb.set_trace()
 						continue
 
+					if f2_dict[book][chapter][verse] in ['', '[]', []]:
+						continue
+					#print(f2_dict[book][chapter][verse])
+
 					#mapped_words = {'german':'deu-Latn', 'italian':'ita-Latn', 'latin':'ita-Latn', 'spanish':'Es', 'greek':'Gre'}
-					mapped[book][chapter][verse][l2] = f2_dict[book][chapter][verse]
 					if lemma_l2:
 						mapped[book][chapter][verse][l2+'_analyzed'] = analyze(f2_dict[book][chapter][verse], cube2, lang=l2)
 					else:
 						mapped[book][chapter][verse][l2+'_analyzed'] = fake_analyze(f2_dict[book][chapter][verse], lang=l2)
 
 					# IPA
-					text = clean(f2_dict[book][chapter][verse])
+					#try:
+					lemmas = [x for x in (list(zip(*mapped[book][chapter][verse][l2+'_analyzed']))[2])]
+					#except:
+					#pdb.set_trace()
+					mapped[book][chapter][verse][l2] = lemmas
 					if l2 =='greek':
-						mapped[book][chapter][verse][l2+'_ipa'] = ipa_transformer(text, 'greek').split()
+						mapped[book][chapter][verse][l2+'_ipa'] = [ipa_transformer(l, 'greek') for l in lemmas] #.split()
 					elif l2 == 'old_english':
 						try:
-							mapped[book][chapter][verse][l2+'_ipa'] = oe(text).split()
+							mapped[book][chapter][verse][l2+'_ipa'] = [oe(l) for l in lemmas] #.split()
 						except:
 							pass
 					elif l2 == 'english':
 						try:
-							mapped[book][chapter][verse][l2+'_ipa'] = oe(text).split() #gen_mods.get_final(gen_mods.getIPA_CMU(f2_dict[book][chapter][verse]))
+							mapped[book][chapter][verse][l2+'_ipa'] = [oe(l) for l in lemmas] #.split() #gen_mods.get_final(gen_mods.getIPA_CMU(f2_dict[book][chapter][verse]))
 						except:
 							pass
 					else:
-						mapped[book][chapter][verse][l2+'_ipa'] = epi.transliterate(text).split()
+						mapped[book][chapter][verse][l2+'_ipa'] = [epi.transliterate(l) for l in lemmas] #.split()
 
-					if l2 != 'Got':
-						match_by_edit_distance(mapped, book, chapter, verse, l2)
+					expand_voc = False
+					if l2 != 'Got' and expand_voc:
+						expand_voc_by_distance(voc, mapped, book, chapter, verse, l2)
+						#pdb.set_trace()
 						
 	return mapped
 
@@ -329,9 +361,11 @@ if __name__ == "__main__":
 									'german/german_luther_1912_utf8.txt', 'greek/greek_byzantine_2000_utf8.txt', 'english/basic_english_utf8.txt',
 									'old_english/douay_rheims_utf8.txt'], voc, lang_acron[lang1], cube1=cube1, cube2=False, lemmatizer=lemmatizer)
 
+				print('Press C to save, Q to quit.')
+				pdb.set_trace()
+				print('')
 				pickle.dump(mapped, open('{}.p'.format(lang_acron[lang1]), 'wb'))
 
-			pdb.set_trace()
 			print('Finished')
 
 		else:

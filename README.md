@@ -21,4 +21,4 @@ Bibles are downloaded from: http://unbound.biola.edu/index.cfm?method=downloads.
 - Latin:
 - Greek:
 
-The vocabulary is built by scraping Wictionary and the dictionary by András Rajki (i.e. https://www.academia.edu/12787999/Gothic_Etymological_Dictionary)
+The vocabulary is built by scraping Wictionary and the dictionary by András Rajki (i.e. https://www.academia.edu/12787999/Gothic_Etymological_Dictionary; http://web.archive.org/web/20100314053320/http://etymological.fw.hu/Gothic.htm)

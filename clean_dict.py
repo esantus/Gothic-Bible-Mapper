@@ -140,7 +140,11 @@ def get_voc_from_csv(fname='entirePGMC_daughters.csv', indo_fname=''):
 				if len(temp) > 0:
 					#print(type(temp))
 					temp = clean(temp)
-					voc[gothic2latin_script_transformer(word)].update({mapped[lang]:[temp]})
+					if mapped[lang] in voc[gothic2latin_script_transformer(word)]:
+						if temp not in voc[gothic2latin_script_transformer(word)][mapped[lang]]:
+							voc[gothic2latin_script_transformer(word)][mapped[lang]].append(temp)
+					else:
+						voc[gothic2latin_script_transformer(word)].update({mapped[lang]:[temp]})
 
 			if voc[gothic2latin_script_transformer(word)] == {}:
 				print('Deleting key {}, because empty: {}'.format(gothic2latin_script_transformer(word), voc[gothic2latin_script_transformer(word)]))
