@@ -10,6 +10,7 @@ import gen_mods
 from tqdm import tqdm
 import pickle
 import epitran
+import editdistance
 import re
 
 import pandas as pd
@@ -160,6 +161,18 @@ def clean(text):
 
 
 
+def match_by_edit_distance(mapped, book, chapter, verse, lang):
+	pdb.set_trace()
+	for word1 in mapped[book][chapter][verse]['got_translation']['Got_ipa']:
+		if lang+'_ipa' in mapped[book][chapter][verse]:
+			pdb.set_trace()
+			for word2 in mapped[book][chapter][verse][lang+'_ipa']:
+				print(word1, word2, editdistance.eval(word1, word2))
+	return True
+
+
+
+
 def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}):
 	f1_dict = load_bible(open(f1, 'r'))
 
@@ -282,6 +295,9 @@ def map_bibles(f1, f2s, voc, l1='gothic', cube1=True, cube2=False, lemmatizer={}
 							pass
 					else:
 						mapped[book][chapter][verse][l2+'_ipa'] = epi.transliterate(text).split()
+
+					if l2 != 'Got':
+						match_by_edit_distance(mapped, book, chapter, verse, l2)
 						
 	return mapped
 

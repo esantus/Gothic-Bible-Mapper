@@ -6,5 +6,5 @@ Code to map the Gothic Bible to other bibles and obtain the scrip transliteratio
 # How to run it
 
 ```
-python ground.py Gothic
+python ground.py gothic
 ```
